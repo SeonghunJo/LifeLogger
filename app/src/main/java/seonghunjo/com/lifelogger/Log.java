@@ -37,6 +37,27 @@ public class Log {
     // 타입
     public LogType type;
 
+    public Log(double logLat, double logLng, String logTitle, String logContent) {
+        lat = logLat;
+        lng = logLng;
+        title = logTitle;
+        content = logContent;
+        type = LogType.TYPE_NONE;
+
+        DateFormat sdFormat = new SimpleDateFormat("yyyy. MM. dd hh:mm:ss a");
+        Date nowDate = new Date();
+        date = sdFormat.format(nowDate);
+    }
+
+    public Log(double logLat, double logLng, String logDate, String logTitle, String logContent) {
+        lat = logLat;
+        lng = logLng;
+        title = logTitle;
+        content = logContent;
+        type = LogType.TYPE_NONE;
+        date = logDate;
+    }
+
     public Log(double logLat, double logLng, String logTitle, String logContent, LogType logType) {
         lat = logLat;
         lng = logLng;
@@ -47,5 +68,14 @@ public class Log {
         DateFormat sdFormat = new SimpleDateFormat("yyyy. MM. dd hh:mm:ss a");
         Date nowDate = new Date();
         date = sdFormat.format(nowDate);
+    }
+
+    public Log(double logLat, double logLng, String logDate, String logTitle, String logContent, LogType logType) {
+        lat = logLat;
+        lng = logLng;
+        title = logTitle;
+        content = logContent;
+        type = logType;
+        date = logDate;
     }
 }

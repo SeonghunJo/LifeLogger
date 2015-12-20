@@ -39,7 +39,7 @@ public class LogDetailActivity extends AppCompatActivity {
         Intent intent = getIntent();
 
         double lat = intent.getDoubleExtra("lat", 37.56);
-        double lng = intent.getDoubleExtra("lat", 126.97);
+        double lng = intent.getDoubleExtra("lng", 126.97);
 
         detailTitle = (TextView)findViewById(R.id.detail_title);
         detailDate = (TextView)findViewById(R.id.detail_date);

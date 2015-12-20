@@ -1,5 +1,6 @@
 package seonghunjo.com.lifelogger;
 
+import android.app.Activity;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
@@ -29,9 +30,12 @@ import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
 
-    public static final int UPDATE_LIST = 0;
+    public static final int REQUEST_WRITE = 0;
+    public static final int RESPONSE_WRITE = 1;
 
     static final LatLng SEOUL = new LatLng(37.56, 126.97);
+
+    private double curLat, curLng;
 
     private GoogleMap map;
     private Marker marker;
@@ -50,6 +54,8 @@ public class MainActivity extends AppCompatActivity {
     String tableName = "LogTable";
     int dbMode = Context.MODE_PRIVATE;
 
+    Context context;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -65,7 +71,7 @@ public class MainActivity extends AppCompatActivity {
                         .setAction("Action", null).show();
 
                 writeIntent = new Intent(getApplicationContext(), WriteLogActivity.class);
-                startActivity(writeIntent);
+                startActivityForResult(writeIntent, REQUEST_WRITE);
             }
         });
 
@@ -86,10 +92,10 @@ public class MainActivity extends AppCompatActivity {
 
         LocationListener locationListener = new LocationListener() {
             public void onLocationChanged(Location location) {
-                double lat = location.getLatitude();
-                double lng = location.getLongitude();
+                curLat = location.getLatitude();
+                curLng = location.getLongitude();
 
-                LatLng curPos = new LatLng(lat, lng);
+                LatLng curPos = new LatLng(curLat, curLng);
                 map.moveCamera(CameraUpdateFactory.newLatLngZoom(curPos, 15));
                 marker.setPosition(curPos);
             }
@@ -106,7 +112,10 @@ public class MainActivity extends AppCompatActivity {
 
         // Register the listener with the Location Manager to receive location update
         if (isGPSEnabled) {
-            if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            if (ActivityCompat.checkSelfPermission(
+                    this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                    && ActivityCompat.checkSelfPermission(
+                    this, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                 // TODO: Consider calling
                 //    ActivityCompat#requestPermissions
                 // here to request the missing permissions, and then overriding
@@ -123,8 +132,13 @@ public class MainActivity extends AppCompatActivity {
         }
 
 
-        logList = new ArrayList<Log>();
+        // Database 생성 및 열기
+        db = openOrCreateDatabase(dbName, dbMode, null);
+        // 테이블 생성
+        createTable();
 
+        context = this;
+        logList = new ArrayList<Log>();
 
         //logList.add(new Log(37.56, 126.97, "First", "memo1", Log.LogType.TYPE_NONE));
         //logList.add(new Log(37.56, 126.97, "Second", "memo2", Log.LogType.TYPE_NONE));
@@ -136,21 +150,43 @@ public class MainActivity extends AppCompatActivity {
         recyclerView.setHasFixedSize(true);
         recyclerView.setLayoutManager(layoutManager);
 
+        recyclerView.addOnItemTouchListener(new RecyclerItemClickListener(context, new RecyclerItemClickListener.OnItemClickListener() {
+            @Override
+            public void onItemClick(View view, int position) {
+                // do whatever
+                Log item = logList.get(position);
+                Intent intent = new Intent(context, LogDetailActivity.class);
+
+                intent.putExtra("lat", item.lat);
+                intent.putExtra("lng", item.lng);
+                intent.putExtra("title", item.title);
+                intent.putExtra("date", item.date);
+                intent.putExtra("content", item.content);
+
+                startActivity(intent);
+            }
+        }));
+
         recyclerAdapter = new LogRecyclerViewAdapter(this, logList, R.layout.list_item);
         recyclerView.setAdapter(recyclerAdapter);
+
+        selectAll();
     }
 
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+
         super.onActivityResult(requestCode, resultCode, data);
         switch (resultCode) {
-            case UPDATE_LIST:
-                data.getStringExtra("title", "No Title");
-                data.getStringExtra("content", "");
+            case RESULT_OK:
 
+                String title = data.getStringExtra("title");
+                String content = data.getStringExtra("content");
+
+                Log newData = new Log(curLat, curLng, title, content, Log.LogType.TYPE_NONE);
                 // insert data;
-
+                insertData(0, newData.lat, newData.lng, newData.title, newData.date, newData.content);
                 break;
             default:
                 break;
@@ -167,12 +203,12 @@ public class MainActivity extends AppCompatActivity {
         try {
             String sql =
                     "create table " + tableName +
-                    "(id integer primary key autoincrement type integer not null, " +
+                    "(id integer primary key autoincrement, type integer not null default 0, " +
                     "lat real not null, lng real not null, " +
                     "title text not null, date text not null, comment text not null default '')";
             db.execSQL(sql);
         } catch (android.database.sqlite.SQLiteException e) {
-            android.util.Log.d("Lab sqlite", "error: " + e);
+            android.util.Log.d("SQLite", "error: " + e);
         }
     }
 
@@ -189,14 +225,16 @@ public class MainActivity extends AppCompatActivity {
         values.put("type", type);
         values.put("lat", lat);
         values.put("lng", lng);
-        values.put("title", title);
         values.put("date", date);
+        values.put("title", title);
         values.put("comment", comment);
 
         int id = (int)db.insert(tableName, null, values);
         if(id < 0) {
             // Insert Error
-            android.util.Log.i("LifeLogger", "SQL Insert Fail : " + title);
+            android.util.Log.i("SQLite", "SQL Insert Fail : " + title);
+        } else {
+            android.util.Log.i("SQLite", "SQl Insert success : " + id);
         }
 
         return id;
@@ -224,26 +262,34 @@ public class MainActivity extends AppCompatActivity {
             int id = result.getInt(0);
             String name = result.getString(1);
             //Toast.makeText(this, "index= " + id + " name=" + name, Toast.LENGTH_SHORT).show();
-            android.util.Log.d("lab_sqlite", "\"index= \" + id + \" name=\" + name ");
+            android.util.Log.d("SQLite", "\"index= \" + id + \" name=\" + name ");
         }
         result.close();
     }
 
     // 모든 Data 읽기
     public void selectAll() {
-        String sql = "select * from " + tableName + ";";
+        String sql = "select * from " + tableName + " order by id DESC;";
         Cursor results = db.rawQuery(sql, null);
         results.moveToFirst();
 
         while (!results.isAfterLast()) {
             int id = results.getInt(0);
-            String name = results.getString(1);
-            //Toast.makeText(this, "index= " + id + " name=" + name, Toast.LENGTH_SHORT).show();
-            android.util.Log.d("lab_sqlite", "index= " + id + " name=" + name);
+            int type = results.getInt(1);
+            double lat = results.getDouble(2);
+            double lng = results.getDouble(3);
+            String title = results.getString(4);
+            String date = results.getString(5);
+            String content = results.getString(6);
 
+            android.util.Log.d("SQLite", "index= " + id + ", " + lat + ", " + lng + ", " + title + ", " + date + ", " + content);
+
+            logList.add(new Log(lat, lng, date, title, content));
             results.moveToNext();
         }
         results.close();
+
+        recyclerAdapter.notifyDataSetChanged();
     }
 
     @Override

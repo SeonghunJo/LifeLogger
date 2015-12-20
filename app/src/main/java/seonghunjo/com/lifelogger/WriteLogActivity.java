@@ -28,10 +28,10 @@ public class WriteLogActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 Intent resultIntent = new Intent();
-                resultIntent.putExtra("title", editTitle.getText());
-                resultIntent.putExtra("content", editContent.getText());
+                resultIntent.putExtra("title", editTitle.getText().toString());
+                resultIntent.putExtra("content", editContent.getText().toString());
 
-                setResult(MainActivity.UPDATE_LIST, resultIntent);
+                setResult(RESULT_OK, resultIntent);
                 finish();
             }
         });

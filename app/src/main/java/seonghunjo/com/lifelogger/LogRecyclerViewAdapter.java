@@ -42,15 +42,6 @@ public class LogRecyclerViewAdapter extends RecyclerView.Adapter<LogRecyclerView
             @Override
             public void onClick(View v) {
 
-                Intent intent = new Intent(context, LogDetailActivity.class);
-
-                intent.putExtra("lat", item.lat);
-                intent.putExtra("lng", item.lng);
-                intent.putExtra("title", item.title);
-                intent.putExtra("date", item.date);
-                intent.putExtra("content", item.content);
-
-                context.startActivity(intent);
             }
         });
     }
