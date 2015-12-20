@@ -140,10 +140,6 @@ public class MainActivity extends AppCompatActivity {
         context = this;
         logList = new ArrayList<Log>();
 
-        //logList.add(new Log(37.56, 126.97, "First", "memo1", Log.LogType.TYPE_NONE));
-        //logList.add(new Log(37.56, 126.97, "Second", "memo2", Log.LogType.TYPE_NONE));
-        //logList.add(new Log(37.56, 126.97, "Third", "memo3", Log.LogType.TYPE_NONE));
-
         recyclerView = (RecyclerView)findViewById(R.id.recyclerview);
         LinearLayoutManager layoutManager = new LinearLayoutManager(getApplicationContext());
         layoutManager.setOrientation(LinearLayoutManager.VERTICAL);
@@ -193,11 +189,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void GetLogListFromDB()
-    {
-
-    }
-
     // Table 생성
     public void createTable() {
         try {
@@ -237,6 +228,8 @@ public class MainActivity extends AppCompatActivity {
             android.util.Log.i("SQLite", "SQl Insert success : " + id);
         }
 
+        selectAll();
+
         return id;
     }
 
@@ -273,6 +266,7 @@ public class MainActivity extends AppCompatActivity {
         Cursor results = db.rawQuery(sql, null);
         results.moveToFirst();
 
+        logList.clear();
         while (!results.isAfterLast()) {
             int id = results.getInt(0);
             int type = results.getInt(1);
